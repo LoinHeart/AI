@@ -1,0 +1,74 @@
+# Import necessary libraries
+import pandas as pd  # For data manipulation and analysis
+import seaborn as sns  # For data visualization
+from sklearn.model_selection import train_test_split  # For splitting data into training and testing sets
+from sklearn.linear_model import LinearRegression  # For performing linear regression
+from sklearn import metrics  # For evaluating the model's performance
+import numpy as np  # For numerical operations
+
+# Load the advertising dataset into a pandas DataFrame
+df = pd.read_csv('Advertising.csv')
+
+# Display the first 6 rows of the dataset to understand its structure
+df.head(6)
+
+# Display the column names of the dataset
+df.columns
+
+# Select the features (independent variables) for the model: TV, Radio, and Newspaper
+x = df[['TV', 'Radio', 'Newspaper']]
+
+# Select the target variable (dependent variable) for the model: Sales
+y = df['Sales']
+
+# Split the dataset into training and testing sets
+# 80% of the data will be used for training, and 20% for testing
+x_train, x_test, y_train, y_test = train_test_split(x, y, train_size=0.8, random_state=15)
+
+# Print the shape of the training set to check the number of samples and features
+print("x_train shape:", x_train.shape)
+
+# Print the shape of the testing set to check the number of samples and features
+print("x_test shape:", x_test.shape)
+
+# Initialize the Linear Regression model
+LR = LinearRegression()
+
+# Train the Linear Regression model using the training data
+LR.fit(x_train.values, y_train)
+
+# Get the intercept (the value of Y when all X variables are 0)
+LR.intercept_
+
+# Get the coefficients for each feature (TV, Radio, Newspaper)
+LR.coef_
+
+# Print the Linear Regression equation
+print("The LR model is: Y = ", LR.intercept_, "+", 
+      LR.coef_[0], "* TV + ", 
+      LR.coef_[1], "* Radio + ", 
+      LR.coef_[2], "* Newspaper")
+
+# Predict the sales for a new advertisement scenario
+advertisement = [[120, 50, 60]]  # Example values for TV, Radio, and Newspaper
+
+# Use the trained model to predict the sales
+pred = LR.predict(advertisement)
+print("Prediction for the given advertisement scenario: ", pred[0])
+
+# Predict the sales for the test data
+y_pred = LR.predict(x_test.values)
+y_pred
+
+# Visualize the relationship between actual sales (y_test) and predicted sales (y_pred)
+sns.regplot(x=y_test, y=y_pred, color='green')
+
+# Calculate evaluation metrics to assess the model's performance
+mae = metrics.mean_absolute_error(y_test, y_pred)  # Mean Absolute Error
+mse = metrics.mean_squared_error(y_test, y_pred)  # Mean Squared Error
+rmse = np.sqrt(metrics.mean_squared_error(y_test, y_pred))  # Root Mean Squared Error
+
+# Print the evaluation metrics with two decimal precision
+print('Mean Absolute Error (MAE) =', mae.round(2))
+print('Mean Squared Error (MSE) =', mse.round(2))
+print('Root Mean Squared Error (RMSE) =', rmse.round(2))
