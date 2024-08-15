@@ -1,0 +1,238 @@
+# Importing necessary libraries
+import gym  # Importing the Gym library for reinforcement learning
+
+# Create the Taxi-v3 environment
+# "ansi" render mode is used to return the environment's state as a string
+env = gym.make("Taxi-v3", render_mode="ansi").env
+
+# Reset the environment to its initial state with a fixed seed for reproducibility
+env.reset(seed=0)
+
+# Unlock the environment to allow for modifications
+env = env.unwrapped
+
+# Render the initial state of the environment
+arr = env.render()
+print(arr)  # Print the rendered state
+
+# Display the action space (set of possible actions) and state space (set of possible states)
+print("Action Space:", env.action_space)  # Show all available actions
+print("State Space:", env.observation_space)  # Show the total number of states
+
+# Encode a specific state where:
+# - Taxi is at row 3, column 1
+# - Passenger is at location 2
+# - Destination is location 0
+state = env.encode(3, 1, 2, 0) 
+print("State:", state)  # Display the encoded state as an integer
+
+# Set the environment's current state to the encoded state
+env.s = state
+
+# Render the environment to visualize the encoded state
+arr = env.render()
+print(arr)  # Print the rendered state for visual confirmation
+
+# Display the probabilities of transitions from the current state for each action
+env.P[env.s]
+
+# Initial setup for simulation
+# Set the initial state (same as above)
+state = env.encode(3, 1, 2, 0) 
+env.s = state  # Set the state in the environment
+
+# Initialize counters for steps (epochs) and penalties
+epochs = 0  # Counter for the number of steps taken
+penalties = 0  # Counter for the number of penalties incurred
+
+# List to store frames for visualization later
+frames = []
+
+# Variable to track if the goal is reached
+done = False  # Indicates whether the task is complete
+
+# Simulation loop until the goal is reached
+while not done:
+    # Randomly select an action
+    action = env.action_space.sample()
+    
+    # Perform the action and transition to the next state
+    state, reward, done, _, _ = env.step(action)
+    
+    # Count penalties for incorrect pickups or drop-offs
+    if reward == -10:
+        penalties += 1  # Increment the penalty counter
+    
+    # Save the frame data for later visualization
+    frames.append({
+        'state': state,
+        'action': action,
+        'reward': reward
+    })
+
+    # Increment the step counter
+    epochs += 1  # Increment the step counter
+
+# Output the results of the simulation
+print("Timesteps taken:", epochs)  # Total number of steps taken
+print("Penalties incurred:", penalties)  # Total penalties incurred
+
+# Importing libraries for visualization
+from IPython.display import clear_output
+from time import sleep
+
+# Function to animate the agent's journey through the environment
+def print_frames(frames):
+    # Define the actions corresponding to each action code
+    actions = ['North', 'South', 'East', 'West', 'Pick-up', 'Drop-off']
+    
+    for i, frame in enumerate(frames):
+        env.s = frame['state']  # Set the environment to the current state in the frame
+        clear_output(wait=True)  # Clear the previous output
+        
+        # Render the current frame
+        arr = env.render()
+        print(arr)  # Display the rendered state
+        
+        # Print the details of the current timestep
+        print(f"Timestep: {i + 1}")
+        print(f"State: {frame['state']}")
+        print(f"Action: {actions[frame['action']]}")
+        print(f"Reward: {frame['reward']}")
+        
+        sleep(0.1)  # Pause for 0.1 seconds to create an animation effect
+
+# Call the animation function
+print_frames(frames)
+
+# Performance evaluation without learning
+
+# Set the number of episodes to simulate
+episodes = 100
+
+# Initialize counters for total epochs and total penalties
+total_epochs = 0  # Total number of steps across all episodes
+total_penalties = 0  # Total penalties incurred across all episodes
+
+for _ in range(episodes):
+    state = env.reset()[0]  # Reset environment to a random initial state
+    penalties = 0  # Reset penalty counter for the episode
+    reward = 0  # Initialize reward variable
+    epochs = 0  # Initialize step counter for the episode
+    done = False  # Reset done flag
+    
+    # Run simulation until the goal is reached
+    while not done:
+        action = env.action_space.sample()  # Randomly select an action
+        state, reward, done, _, _ = env.step(action)  # Execute the action and observe the result
+        
+        if reward == -10:  # Count penalties for incorrect actions
+            penalties += 1
+        
+        epochs += 1  # Increment the step counter
+    
+    # Accumulate the total penalties and epochs across all episodes
+    total_penalties += penalties
+    total_epochs += epochs
+
+# Print the average performance metrics
+print(f"Results after {episodes} episodes:")
+print(f"Average timesteps per episode: {total_epochs / episodes}")  # Average steps per episode
+print(f"Average penalties per episode: {total_penalties / episodes}")  # Average penalties per episode
+
+# Importing numpy for Q-learning
+import numpy as np
+
+# Initialize Q-table with zeros
+# Rows represent states, columns represent actions
+q_table = np.zeros([env.observation_space.n, env.action_space.n])
+print(q_table)  # Display the initial Q-table
+
+# Training the agent using Q-learning
+
+# Hyperparameters for Q-learning
+alpha = 0.4  # Learning rate
+gamma = 0.6  # Discount factor
+
+# Set the number of training episodes
+episodes = 100000
+
+for i in range(episodes):
+    state = env.reset()[0]  # Reset to a random initial state
+    epochs = 0  # Reset step counter for the episode
+    penalties = 0  # Reset penalty counter for the episode
+    done = False  # Reset done flag
+    
+    # Run simulation until the goal is reached
+    while not done:
+        action = np.argmax(q_table[state])  # Choose action with the highest Q-value for the current state
+        old_value = q_table[state, action]  # Store the current Q-value
+        next_state, reward, done, _, _ = env.step(action)  # Take the action and observe the outcome
+        next_max = np.max(q_table[next_state])  # Find the maximum Q-value for the next state
+        
+        # Update the Q-value for the current state-action pair
+        new_value = (1 - alpha) * old_value + alpha * (reward + gamma * next_max)
+        q_table[state, action] = new_value  # Update the Q-table
+        
+        state = next_state  # Move to the next state
+
+# Training completed
+print("Training finished.\n")
+
+# Display the final Q-table
+print(q_table)
+
+# Performance evaluation after training
+
+episodes = 100  # Set the number of episodes to evaluate
+total_epochs = 0  # Initialize counter for total epochs
+total_penalties = 0  # Initialize counter for total penalties
+
+for _ in range(episodes):
+    state = env.reset()[0]  # Reset to a random initial state
+    penalties = 0  # Reset penalty counter for the episode
+    reward = 0  # Initialize reward variable
+    epochs = 0  # Initialize step counter for the episode
+    done = False  # Reset done flag
+    
+    # Run simulation using the trained policy
+    while not done:
+        action = np.argmax(q_table[state])  # Choose action with the highest Q-value
+        state, reward, done, _, _ = env.step(action)  # Execute the action and observe the result
+        
+        if reward == -10:  # Count penalties for incorrect actions
+            penalties += 1
+        
+        epochs += 1  # Increment the step counter
+    
+    total_penalties += penalties  # Accumulate penalties
+    total_epochs += epochs  # Accumulate epochs
+
+# Print the average performance metrics after training
+print(f"Results after {episodes} episodes:")
+print(f"Average timesteps per episode: {total_epochs / episodes}")  # Average steps per episode
+print(f"Average penalties per episode: {total_penalties / episodes}")  # Average penalties per episode
+
+# Animation of the agent's journey using the trained policy
+
+state = env.encode(3, 1, 2, 0)  # Set a specific initial state
+print("State:", state)  # Display the encoded state
+env.s = state  # Assign the state to the environment
+arr = env.render()  # Render the environment
+print(arr)  # Display the rendered state
+
+frames = []  # List to store frames for visualization
+done = False  # Reset done flag
+
+while not done:
+    action = np.argmax(q_table[state])  # Choose action with the highest Q-value
+    state, reward, done, _, _ = env.step(action)  # Execute the action and observe the result
+    
+    frames.append({
+        'state': state,
+        'action': action,
+        'reward': reward
+    })
+
+# Display the animation of the agent's journey
+print_frames(frames)
